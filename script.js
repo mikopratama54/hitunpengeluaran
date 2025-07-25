@@ -9,7 +9,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const exportCsvBtn = document.getElementById("exportCsv");
   const clearDataBtn = document.getElementById("clearData");
 
+  // Elemen untuk Chart
+  const myPieChartCanvas = document.getElementById("myPieChart");
+  const showWeeklyChartBtn = document.getElementById("showWeeklyChart");
+  const showMonthlyChartBtn = document.getElementById("showMonthlyChart");
+
   let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+  let myChart; // Variabel untuk menyimpan instance chart
 
   // Fungsi untuk memformat angka menjadi mata uang Rupiah
   const formatRupiah = (angka) => {
@@ -65,6 +71,9 @@ document.addEventListener("DOMContentLoaded", () => {
     saldoSaatIniSpan.style.color = saldoSaatIni >= 0 ? "#1b5e20" : "#c62828"; // Hijau jika positif, merah jika negatif
 
     localStorage.setItem("transactions", JSON.stringify(transactions)); // Simpan ke Local Storage
+
+    // Update Chart setiap kali transaksi di-render ulang
+    updatePieChart("monthly"); // Default tampilan bulanan
   };
 
   // Fungsi untuk menambah transaksi baru
@@ -74,7 +83,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const description = document.getElementById("deskripsi").value;
     const amount = parseFloat(document.getElementById("jumlah").value);
     const type = document.getElementById("tipe").value;
-    const date = new Date().toLocaleDateString("id-ID"); // Tanggal otomatis
+    const date = new Date().toLocaleDateString("id-ID", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }); // Tanggal otomatis dengan format YYYY-MM-DD
 
     if (description && amount > 0) {
       const newTransaction = {
@@ -135,6 +148,89 @@ document.addEventListener("DOMContentLoaded", () => {
       renderTransactions(); // Render ulang tabel
     }
   });
+
+  // --- Fungsi untuk Diagram Pie ---
+  const calculatePeriodTotals = (period) => {
+    let pemasukan = 0;
+    let pengeluaran = 0;
+    const today = new Date();
+    let startDate;
+
+    if (period === "weekly") {
+      startDate = new Date(today.setDate(today.getDate() - 7));
+    } else if (period === "monthly") {
+      startDate = new Date(today.setMonth(today.getMonth() - 1));
+    }
+
+    transactions.forEach((transaction) => {
+      const transactionDate = new Date(
+        transaction.date.split("/").reverse().join("-")
+      ); // Konversi dd/mm/yyyy ke yyyy-mm-dd untuk Date object
+
+      if (transactionDate >= startDate) {
+        if (transaction.type === "pemasukan") {
+          pemasukan += transaction.amount;
+        } else {
+          pengeluaran += transaction.amount;
+        }
+      }
+    });
+
+    return { pemasukan, pengeluaran };
+  };
+
+  const updatePieChart = (period) => {
+    const { pemasukan, pengeluaran } = calculatePeriodTotals(period);
+
+    if (myChart) {
+      myChart.destroy(); // Hapus chart yang ada sebelumnya
+    }
+
+    myChart = new Chart(myPieChartCanvas, {
+      type: "pie",
+      data: {
+        labels: ["Pemasukan", "Pengeluaran"],
+        datasets: [
+          {
+            data: [pemasukan, pengeluaran],
+            backgroundColor: ["#4CAF50", "#FF6384"], // Hijau untuk pemasukan, Merah untuk pengeluaran
+            hoverOffset: 4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "top",
+          },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                let label = context.label || "";
+                if (label) {
+                  label += ": ";
+                }
+                if (context.parsed !== null) {
+                  label += formatRupiah(context.parsed);
+                }
+                return label;
+              },
+            },
+          },
+        },
+      },
+    });
+  };
+
+  // Event listener untuk tombol filter chart
+  showWeeklyChartBtn.addEventListener("click", () =>
+    updatePieChart("weekly")
+  );
+  showMonthlyChartBtn.addEventListener("click", () =>
+    updatePieChart("monthly")
+  );
 
   // Panggil renderTransactions saat halaman pertama kali dimuat
   renderTransactions();

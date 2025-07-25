@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Manajemen Keuangan Sederhana</title>
     <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
     <div class="container">
@@ -16,6 +17,17 @@
         <p>
           Saldo Saat Ini: <span id="saldoSaatIni" class="balance">Rp 0</span>
         </p>
+      </div>
+
+      <div class="chart-section">
+        <h2>Ringkasan Keuangan</h2>
+        <div class="chart-controls">
+          <button id="showWeeklyChart">Mingguan</button>
+          <button id="showMonthlyChart">Bulanan</button>
+        </div>
+        <div class="chart-container">
+          <canvas id="myPieChart"></canvas>
+        </div>
       </div>
 
       <div class="form-section">
